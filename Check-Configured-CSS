@@ -1,0 +1,30 @@
+#!/bin/bash
+
+username='username'
+password='password'
+
+echo '<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ns="http://www.cisco.com/AXL/API/11.5">
+<soapenv:Header/>
+<soapenv:Body>
+<ns:executeSQLQuery>
+<sql>
+select dnorpattern,alertingname,name from numplan n, callingsearchspace c where n.fkcallingsearchspace_sharedlineappear = c.pkid and (dnorpattern like "1%") and name not like 'CSSName%'
+</sql>
+</ns:executeSQLQuery>
+</soapenv:Body>
+</soapenv:Envelope>' > dns.xml
+ 
+resp=$(curl -s -k -u $username:$password -H "Content-type: text/xml;" -d @dns.xml https://CUCMIP:8443/axl/)
+rm -f dns.xml
+
+dns=$(echo $resp | grep -oP '(?<=<dnorpattern>|<name>).*?(?=</dnorpattern|</name)')
+
+if [ -z "$dns" ]
+then
+        echo "PARAMETERS OK - all numbers configured Correctly"
+        exit 0
+else
+        echo "PARAMETERS CRITICAL - Please fix the following numbers: "
+        echo $dns | tr " " "\n"
+        exit 2
+fi
